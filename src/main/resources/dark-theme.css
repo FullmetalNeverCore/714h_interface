@@ -1,0 +1,42 @@
+/* Make the background color transparent */
+.root,
+.text,
+.label,
+.tool-bar,
+.scroll-pane,
+.text-area {
+    -fx-background-size: cover;
+    -fx-background-color: transparent; /* Transparent background */
+    -fx-text-fill: red; /* White text color */
+}
+
+/* Optionally set a background image for the root node */
+.root {
+    -fx-background-image: url('https://i.imgur.com/WNwSuk5.jpg');
+    -fx-background-color: rgba(0, 0, 0, 0.5); /* Adjust the last value (0.5) for the opacity */
+    -fx-background-blend-mode: multiply; /* Blend the tint with the background image */
+}
+
+.text-area {
+    -fx-font-size: 20px;
+    -fx-control-inner-background: black;
+    -fx-text-fill: red;
+}
+
+.scroll-pane .viewport {
+    -fx-background-color: transparent; /* Transparent background */
+}
+
+.button {
+    -fx-background-color: #333;
+    -fx-text-fill: red;
+}
+
+.button-large {
+    -fx-font-size: 20px;
+    -fx-padding: 20px;
+}
+
+.menu-bar {
+    -fx-background-color: #2b2b2b;
+}
