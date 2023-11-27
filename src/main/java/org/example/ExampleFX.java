@@ -50,6 +50,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.List;
 import java.util.ArrayList;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
 
 import javax.xml.crypto.Data;
 
@@ -57,7 +59,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-
 
 
 
@@ -84,6 +85,7 @@ public class ExampleFX extends Application{
 
     private boolean hidenoimg;
 
+
     @Override
     public void start(Stage primaryStage) {
         this.primaryStage = primaryStage;
@@ -96,7 +98,7 @@ public class ExampleFX extends Application{
         this.SexecutorService = Executors.newScheduledThreadPool(4);
 
 
-        enterIP("192.168.8.111").ifPresent(ip -> config.setIP(ip));
+        enterIP("192.168.8.136").ifPresent(ip -> config.setIP(ip));
 
         this.chars = de.cl();
 
@@ -176,6 +178,7 @@ public class ExampleFX extends Application{
                         imgurl.setOnMouseClicked(event -> changeGUI(charName, imageUrl));
 
                         Label label = new Label(charName);
+                        label.setOnMouseClicked(event -> changeGUI(charName, imageUrl));
                         VBox vb = new VBox(5, imgurl, label);
                         vb.setAlignment(Pos.CENTER);
 
@@ -254,14 +257,38 @@ public class ExampleFX extends Application{
 
         //background
 
-        Image backgroundImage = new Image(img);
 
-        BackgroundImage backgroundImg = new BackgroundImage(backgroundImage,
-                BackgroundRepeat.NO_REPEAT, BackgroundRepeat.NO_REPEAT,
-                BackgroundPosition.CENTER,
-                new BackgroundSize(BackgroundSize.AUTO, BackgroundSize.AUTO, false, false, true, false));
+        VBox imageBox = new VBox(10);
+        Label label = new Label(String.format("Engram : %s",name));
+        
+        executorService.submit(()->{
 
-        Background background = new Background(backgroundImg);
+            Image backgroundImage = new Image(img,600,800,true,true,true);
+
+            ImageView backgroundImageView = new ImageView(new Image(img,600,800,true,true,true));
+
+            Platform.runLater(()->{
+                backgroundImageView.setFitWidth(600);
+                backgroundImageView.setFitHeight(800);
+                backgroundImageView.setPreserveRatio(true);
+
+                BackgroundImage backgroundImg = new BackgroundImage(backgroundImage,
+                        BackgroundRepeat.NO_REPEAT, BackgroundRepeat.NO_REPEAT,
+                        BackgroundPosition.CENTER,
+                        new BackgroundSize(BackgroundSize.AUTO, BackgroundSize.AUTO, false, false, true, false));
+
+                Background background = new Background(backgroundImg);
+
+                backgroundImageView.setFitWidth(600);
+                backgroundImageView.setFitHeight(800);
+                backgroundImageView.setPreserveRatio(true);
+
+                imageBox.getChildren().addAll(label,backgroundImageView);
+                imageBox.setAlignment(Pos.CENTER);
+
+            });
+        });
+
 
         MenuButton menuButton = new MenuButton("Engine");
 
@@ -321,18 +348,13 @@ public class ExampleFX extends Application{
 
 
         ScrollPane scrollPane = new ScrollPane();
-        Label label = new Label(String.format("Engram : %s",name));
+
 
         Button el = new Button("Engram Library");
         el.setOnAction(e -> login());
         ToolBar toolBar = new ToolBar(el);
 
         toolBar.getItems().add(hostButton);
-
-        ImageView backgroundImageView = new ImageView(new Image(img));
-        backgroundImageView.setFitWidth(600);
-        backgroundImageView.setFitHeight(800);
-        backgroundImageView.setPreserveRatio(true);
 
 
         TextArea editableTextArea = new TextArea();
@@ -364,10 +386,6 @@ public class ExampleFX extends Application{
         VBox vbox = new VBox(10);
 
 
-        VBox imageBox = new VBox(10);
-
-        imageBox.getChildren().addAll(label,backgroundImageView);
-        imageBox.setAlignment(Pos.CENTER);
 
         sendButton.setOnAction(e -> {
             String tx = editableTextArea.getText();
