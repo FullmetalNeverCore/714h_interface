@@ -39,8 +39,17 @@ import javafx.scene.layout.BackgroundRepeat;
 import javafx.scene.layout.BackgroundSize;
 import javafx.scene.layout.BackgroundPosition;
 
+import org.springframework.messaging.converter.MappingJackson2MessageConverter;
+import org.springframework.messaging.simp.stomp.StompFrameHandler;
+import org.springframework.messaging.simp.stomp.StompHeaders;
+import org.springframework.messaging.simp.stomp.StompSession;
+import org.springframework.web.socket.messaging.WebSocketStompClient;
+import org.springframework.web.socket.client.standard.StandardWebSocketClient;
+
+
 
 import java.awt.*;
+import java.net.URI;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -48,6 +57,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import java.util.List;
+import org.java_websocket.client.WebSocketClient;
 import java.util.ArrayList;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -70,6 +80,7 @@ public class ExampleFX extends Application{
     private Config config = Config.getInstance();
 
     private String msgbuff;
+
 
     private CurrentSetup cs = CurrentSetup.getInstance();
 
@@ -95,10 +106,13 @@ public class ExampleFX extends Application{
 
         this.executorService = Executors.newFixedThreadPool(4);
 
+
+
         this.SexecutorService = Executors.newScheduledThreadPool(4);
 
 
         enterIP("192.168.8.136").ifPresent(ip -> config.setIP(ip));
+
 
         this.chars = de.cl();
 
@@ -148,15 +162,13 @@ public class ExampleFX extends Application{
         FlowPane imageLayout = new FlowPane(10, 10);
 
 
-        Label titleLabel = new Label("MIKOSHI");
-        Label titledownLabel = new Label("God in his heaven,all right with the world.");
-        titledownLabel.setStyle("-fx-font-size: 20px; -fx-padding: 20 0 200 0;");
-        titleLabel.setStyle("-fx-font-size: 80px; -fx-padding: 20 0 200 0;"); // Adjust font size and padding as needed
-        VBox topContainer = new VBox(titleLabel,titledownLabel);
-        topContainer.setAlignment(Pos.CENTER);
+//        titledownLabel.setStyle("-fx-font-size: 20px; -fx-padding: 20 0 200 0;");
+//        titleLabel.setStyle("-fx-font-size: 80px; -fx-padding: 20 0 200 0;"); // Adjust font size and padding as needed
 
-        layout.setTop(topContainer); // Set the top container with the title
 
+        Image titleLabImage = new Image("https://i.imgur.com/zsk0v7O.png", 1024, 1024, true, true, true);
+        ImageView titleLab = new ImageView(titleLabImage);
+        VBox topContainer = new VBox(titleLab);
 
         for (Map.Entry<String, String> entry : chars.entrySet()) {
             if (entry.getValue() != null && !entry.getValue().equals("false") && !entry.getValue().isEmpty()) {
@@ -164,11 +176,13 @@ public class ExampleFX extends Application{
                 String imageUrl = entry.getValue();
                 String charName = entry.getKey();
 
-
-                if (this.hidenoimg && imageUrl.equals("https://i.imgur.com/aiHxqKf.png")){continue;}
+                if (this.hidenoimg && imageUrl.equals("https://i.imgur.com/aiHxqKf.png")) {
+                    continue;
+                }
 
                 executorService.submit(() -> {
                     Image image = new Image(imageUrl, 200, 300, true, true, true);
+
                     // Width, Height, Preserve Ratio, Smooth, Background Loading
                     Platform.runLater(() -> {
                         ImageView imgurl = new ImageView(image);
@@ -187,6 +201,11 @@ public class ExampleFX extends Application{
                 });
             }
         }
+
+        topContainer.setAlignment(Pos.CENTER);
+        layout.setTop(topContainer);
+
+
 
         layout.setCenter(imageLayout);
         Button myButton = new Button("Change host");
@@ -314,6 +333,7 @@ public class ExampleFX extends Application{
         nonEditableTextArea.setMinSize(500, 400);
         nonEditableTextArea.setOpacity(0.5);
 
+        String url = String.format("$s:5001/",config.getIP()); //stomp channel url
 
 
         SexecutorService.scheduleAtFixedRate(() -> {
