@@ -39,6 +39,10 @@ import javafx.scene.layout.BackgroundRepeat;
 import javafx.scene.layout.BackgroundSize;
 import javafx.scene.layout.BackgroundPosition;
 
+import javafx.animation.FadeTransition;
+import javafx.util.Duration;
+import javafx.animation.StrokeTransition;
+
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 import org.springframework.messaging.simp.stomp.StompFrameHandler;
 import org.springframework.messaging.simp.stomp.StompHeaders;
@@ -62,6 +66,7 @@ import java.util.ArrayList;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.w3c.dom.Text;
 
 import javax.xml.crypto.Data;
 
@@ -79,8 +84,13 @@ public class ExampleFX extends Application{
 
     private Config config = Config.getInstance();
 
+    private Stuff stuff = new Stuff();
+
     private String msgbuff;
 
+    private String server_data;
+
+    private String filter;
 
     private CurrentSetup cs = CurrentSetup.getInstance();
 
@@ -96,6 +106,9 @@ public class ExampleFX extends Application{
 
     private boolean hidenoimg;
 
+    private StringBuilder pingstat;
+
+
 
     @Override
     public void start(Stage primaryStage) {
@@ -106,7 +119,7 @@ public class ExampleFX extends Application{
 
         this.executorService = Executors.newFixedThreadPool(4);
 
-
+        this.filter = "";
 
         this.SexecutorService = Executors.newScheduledThreadPool(4);
 
@@ -114,9 +127,14 @@ public class ExampleFX extends Application{
         enterIP("192.168.8.136").ifPresent(ip -> config.setIP(ip));
 
 
+        this.server_data = de.neofetch();
+
+
         this.chars = de.cl();
 
         System.out.println(config.getIP());  //checking ip
+
+        this.pingstat = stuff.Ping();
 
         login(); //login page
 
@@ -129,22 +147,20 @@ public class ExampleFX extends Application{
 
     }
 
+
+
     @Override
     public void stop() {
-        System.out.println("Shutting down...");
-        for (ExecutorService x : new ArrayList<ExecutorService>(Arrays.asList(this.executorService,this.SexecutorService))){
-            if (x != null) {
-                x.shutdown();
-                try {
-                    if (!x.awaitTermination(800, TimeUnit.MILLISECONDS)) {
-                        x.shutdownNow();
-                    }
-                } catch (InterruptedException e) {
-                    x.shutdownNow();
-                }
-            }
-        }
+        stuff.StopThreads(new ArrayList<ExecutorService>(Arrays.asList(this.executorService,this.SexecutorService)));
     }
+
+    public void fadein(ImageView obj){
+        FadeTransition fadeTransition = new FadeTransition(Duration.seconds(5), obj);
+        fadeTransition.setFromValue(0.0);
+        fadeTransition.setToValue(1.0);
+        fadeTransition.play();
+    }
+
 
     public static Optional<String> enterIP(String ip){
         TextInputDialog dialog = new TextInputDialog(ip); // Default IP
@@ -157,24 +173,106 @@ public class ExampleFX extends Application{
         return result;
     }
 
+
+    public TextArea nonedtab(int sizex,int sizey,double opac){
+        TextArea serverInfo = new TextArea();
+        serverInfo.setEditable(false);
+        serverInfo.setPrefSize(sizex, sizey);
+        serverInfo.setOpacity(opac);
+        serverInfo.setWrapText(true);
+        serverInfo.setStyle("-fx-text-alignment: left;display: block;" +
+                "      margin-left: auto;" +
+                "      margin-right: auto;" +
+                "      width: 90%;" +
+                "      color:red;" +
+                "      font-size:10px;");
+        return serverInfo;
+    }
+
     private void login() {
+        StackPane root = new StackPane();
+        HBox search = new HBox();
+        Pane spacer = new Pane();
+        Pane spacer2 = new Pane();
+        HBox topContainer = new HBox();
+
+
+        TextArea searchbar = new TextArea();
+        searchbar.setEditable(true);
+        searchbar.setPrefSize(300, 75);
+        searchbar.setOpacity(0.5);
+
+        Button srch = new Button("Search");
+        srch.setOnAction(e -> {
+            this.filter = searchbar.getText();
+            login();
+        });
+
+
+        search.getChildren().addAll(searchbar,srch);
+
+        search.setAlignment(Pos.CENTER);
+
+        root.getChildren().add(search);
+        root.setAlignment(search, Pos.CENTER);
+
         BorderPane layout = new BorderPane();
         FlowPane imageLayout = new FlowPane(10, 10);
+        VBox forImage = new VBox();
 
-
-//        titledownLabel.setStyle("-fx-font-size: 20px; -fx-padding: 20 0 200 0;");
+        Label eng = new Label("ENGRAMS: ");
+        eng.setStyle("-fx-font-size: 40px; -fx-padding: 20 0 200 0;");
 //        titleLabel.setStyle("-fx-font-size: 80px; -fx-padding: 20 0 200 0;"); // Adjust font size and padding as needed
 
+        TextArea serverInfo = nonedtab(500,250,0.5);
 
-        Image titleLabImage = new Image("https://i.imgur.com/zsk0v7O.png", 1024, 1024, true, true, true);
-        ImageView titleLab = new ImageView(titleLabImage);
-        VBox topContainer = new VBox(titleLab);
+        TextArea pingInfo = nonedtab(500,250,0.5);
+
+
+        serverInfo.setText(this.server_data);
+
+        pingInfo.setText(this.pingstat.toString());
+
+        Button ping = new Button("RePing");
+        ping.setOnAction(e -> {
+            this.pingstat = stuff.Ping();
+            pingInfo.setText(this.pingstat.toString());
+        });
+
+        search.getChildren().add(ping);
+
+
+
+        executorService.submit(()->{
+            Image titleLabImage = new Image("https://i.imgur.com/zsk0v7O.png", 1024, 1024, true, true, true);
+            titleLabImage.progressProperty().addListener((obs,oldProgress,newProgress)->{
+                if(newProgress.doubleValue() == 1.0){
+                    ImageView titleLab = new ImageView(titleLabImage);
+                    titleLab.setOpacity(0.0);
+                    fadein(titleLab);
+                    topContainer.setAlignment(Pos.CENTER);
+
+                    topContainer.getChildren().add(pingInfo);
+
+                    topContainer.getChildren().add(spacer2);
+
+                    topContainer.getChildren().add(titleLab);
+
+
+                    topContainer.getChildren().add(spacer);
+
+                    topContainer.getChildren().add(serverInfo);
+                }
+            });
+        });
+
+
+
 
         for (Map.Entry<String, String> entry : chars.entrySet()) {
-            if (entry.getValue() != null && !entry.getValue().equals("false") && !entry.getValue().isEmpty()) {
-
-                String imageUrl = entry.getValue();
-                String charName = entry.getKey();
+            String imageUrl = entry.getValue();
+            String charName = entry.getKey();
+            if (stuff.containsAny(charName, filter) && entry.getValue() != null && !entry.getValue().equals("false") && !entry.getValue().isEmpty()) {
 
                 if (this.hidenoimg && imageUrl.equals("https://i.imgur.com/aiHxqKf.png")) {
                     continue;
@@ -182,56 +280,58 @@ public class ExampleFX extends Application{
 
                 executorService.submit(() -> {
                     Image image = new Image(imageUrl, 200, 300, true, true, true);
-
                     // Width, Height, Preserve Ratio, Smooth, Background Loading
-                    Platform.runLater(() -> {
-                        ImageView imgurl = new ImageView(image);
-                        imgurl.setFitWidth(200);
-                        imgurl.setFitHeight(300);
-                        imgurl.setPreserveRatio(false);
-                        imgurl.setOnMouseClicked(event -> changeGUI(charName, imageUrl));
+                    //checking progress of downloading image
+                    image.progressProperty().addListener((obs, oldProgress, newProgress) -> {
+                        if (newProgress.doubleValue() == 1.0) {
+                            Platform.runLater(() -> {
+                                ImageView imgurl = new ImageView(image);
+                                imgurl.setFitWidth(200);
+                                imgurl.setFitHeight(300);
+                                imgurl.setPreserveRatio(false);
+                                imgurl.setOpacity(0.0);
 
-                        Label label = new Label(charName);
-                        label.setOnMouseClicked(event -> changeGUI(charName, imageUrl));
-                        VBox vb = new VBox(5, imgurl, label);
-                        vb.setAlignment(Pos.CENTER);
+                                fadein(imgurl);
 
-                        imageLayout.getChildren().add(vb);
+                                imgurl.setOnMouseClicked(event -> changeGUI(charName, imageUrl));
+
+                                Label label = new Label(charName);
+                                label.setOnMouseClicked(event -> changeGUI(charName, imageUrl));
+                                VBox vb = new VBox(5, imgurl, label);
+                                vb.setAlignment(Pos.CENTER);
+
+                                imageLayout.getChildren().add(vb);
+                            });
+                        }
                     });
                 });
             }
         }
 
-        topContainer.setAlignment(Pos.CENTER);
+
+
+
         layout.setTop(topContainer);
 
+        forImage.setAlignment(Pos.CENTER);
+
+        forImage.getChildren().addAll(eng,imageLayout);
 
 
-        layout.setCenter(imageLayout);
+        layout.setCenter(forImage);
         Button myButton = new Button("Change host");
         myButton.setOnAction(e -> enterIP(config.getIP()).ifPresent(ip -> config.setIP(ip)));
         Button btnHide = new Button("Filter");
         btnHide.setOnAction(e -> {{
             this.hidenoimg = !this.hidenoimg;
-            System.out.println("Shutting down previous threads...");
-            for (ExecutorService x : new ArrayList<ExecutorService>(Arrays.asList(this.executorService,this.SexecutorService))){
-                if (x != null) {
-                    x.shutdown();
-                    try {
-                        if (!x.awaitTermination(800, TimeUnit.MILLISECONDS)) {
-                            x.shutdownNow();
-                        }
-                    } catch (InterruptedException y) {
-                        x.shutdownNow();
-                    }
-                }
-            }
+            stuff.StopThreads(new ArrayList<ExecutorService>(Arrays.asList(this.executorService,this.SexecutorService)));
             this.executorService = Executors.newFixedThreadPool(4);
             this.SexecutorService = Executors.newScheduledThreadPool(4);
             login();
         }});
+
         ToolBar toolBar = new ToolBar(myButton);
-        toolBar.getItems().add(btnHide);
+        toolBar.getItems().addAll(btnHide,search);
         VBox topLayout = new VBox(toolBar,topContainer);
         layout.setTop(topLayout);
 
@@ -241,7 +341,7 @@ public class ExampleFX extends Application{
         scrollPane.setContent(layout);
         scrollPane.setFitToWidth(true);
         scrollPane.setPannable(true);
-        Scene scene = new Scene(scrollPane, 800, 600);
+        Scene scene = new Scene(scrollPane, 1600, 900);
         scrollPane.getStyleClass().add("overlay");
         scene.getStylesheets().add(getClass().getResource("/dark-theme.css").toExternalForm());
         primaryStage.setScene(scene);
@@ -278,34 +378,43 @@ public class ExampleFX extends Application{
 
 
         VBox imageBox = new VBox(10);
-        Label label = new Label(String.format("Engram : %s",name));
+        Label label = new Label(String.format("Engram : %s | STATUS:CONNECTED",name));
         
         executorService.submit(()->{
 
             Image backgroundImage = new Image(img,600,800,true,true,true);
 
-            ImageView backgroundImageView = new ImageView(new Image(img,600,800,true,true,true));
 
-            Platform.runLater(()->{
-                backgroundImageView.setFitWidth(600);
-                backgroundImageView.setFitHeight(800);
-                backgroundImageView.setPreserveRatio(true);
+            backgroundImage.progressProperty().addListener((obs,oldProgress,newProgress)->{
+                if(newProgress.doubleValue()==1.0){
+                    ImageView backgroundImageView = new ImageView(new Image(img,600,800,true,true,true));
 
-                BackgroundImage backgroundImg = new BackgroundImage(backgroundImage,
-                        BackgroundRepeat.NO_REPEAT, BackgroundRepeat.NO_REPEAT,
-                        BackgroundPosition.CENTER,
-                        new BackgroundSize(BackgroundSize.AUTO, BackgroundSize.AUTO, false, false, true, false));
+                    Platform.runLater(()->{
+                        backgroundImageView.setFitWidth(600);
+                        backgroundImageView.setFitHeight(800);
+                        backgroundImageView.setPreserveRatio(true);
+                        backgroundImageView.setOpacity(0.0);
 
-                Background background = new Background(backgroundImg);
+                        fadein(backgroundImageView);
 
-                backgroundImageView.setFitWidth(600);
-                backgroundImageView.setFitHeight(800);
-                backgroundImageView.setPreserveRatio(true);
+                        BackgroundImage backgroundImg = new BackgroundImage(backgroundImage,
+                                BackgroundRepeat.NO_REPEAT, BackgroundRepeat.NO_REPEAT,
+                                BackgroundPosition.CENTER,
+                                new BackgroundSize(BackgroundSize.AUTO, BackgroundSize.AUTO, false, false, true, false));
 
-                imageBox.getChildren().addAll(label,backgroundImageView);
-                imageBox.setAlignment(Pos.CENTER);
+                        Background background = new Background(backgroundImg);
 
+                        backgroundImageView.setFitWidth(600);
+                        backgroundImageView.setFitHeight(800);
+                        backgroundImageView.setPreserveRatio(true);
+
+                        imageBox.getChildren().addAll(label,backgroundImageView);
+                        imageBox.setAlignment(Pos.CENTER);
+
+                    });
+                }
             });
+
         });
 
 
@@ -333,7 +442,6 @@ public class ExampleFX extends Application{
         nonEditableTextArea.setMinSize(500, 400);
         nonEditableTextArea.setOpacity(0.5);
 
-        String url = String.format("$s:5001/",config.getIP()); //stomp channel url
 
 
         SexecutorService.scheduleAtFixedRate(() -> {
@@ -350,6 +458,8 @@ public class ExampleFX extends Application{
             String combinedString = tempms.toString();
             String[] splitArray = combinedString.split(String.format("%s:",name));
             StringBuffer msgchat = new StringBuffer();
+
+
             if(splitArray.length != 0){
                 for (int x = 0;x < splitArray.length;x++){
                     if (x == splitArray.length-1){
