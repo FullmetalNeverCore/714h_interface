@@ -1,5 +1,6 @@
 package org.example;
 
+import org.springframework.beans.factory.annotation.Autowired;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -19,7 +20,10 @@ import org.json.JSONObject;
 import java.util.HashMap;
 import java.util.Set;
 
+import org.springframework.stereotype.Service;
 
+
+@Service
 public class DataExchange {
 
     private Config config = Config.getInstance();
@@ -82,6 +86,36 @@ public class DataExchange {
             Map<String, Object> resultMap = new Gson().fromJson(content.toString(), type);
 
             return resultMap;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+
+    //obtain server info
+    public String neofetch() {
+        try {
+            URL url = new URL(String.format("http://%s:5001/neofetch", config.getIP()));
+
+            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+            con.setRequestMethod("GET");
+
+            int status = con.getResponseCode();
+            BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+            String inputLine;
+            StringBuffer content = new StringBuffer();
+
+            while ((inputLine = in.readLine()) != null) {
+                content.append(inputLine);
+            }
+
+            in.close();
+            con.disconnect();
+
+
+            return content.toString();
 
         } catch (Exception e) {
             e.printStackTrace();
