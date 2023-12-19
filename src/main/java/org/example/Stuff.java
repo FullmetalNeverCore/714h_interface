@@ -11,7 +11,13 @@ import java.net.InetAddress;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+
 public class Stuff {
+
+    private static final Logger logger = LoggerFactory.getLogger(Stuff.class);
 
     private Config config = Config.getInstance();
 
@@ -28,7 +34,7 @@ public class Stuff {
 
     //Kill Bi--Threads
     public void StopThreads(ArrayList<ExecutorService> arr){
-        System.out.println("Shutting down...");
+        logger.warn("Shutting down...");
         for (ExecutorService x : arr){
             if (x != null) {
                 x.shutdown();
@@ -53,7 +59,7 @@ public class Stuff {
 
 
                 for(String x : new ArrayList<String>(Arrays.asList("google.com",config.getIP()))){
-                    System.out.println(x);
+                    logger.debug(String.format("%s",x));
                     Process process = Runtime.getRuntime().exec(String.format("ping -c 1 %s",x));
                     BufferedReader inputStream = new BufferedReader(
                             new InputStreamReader(process.getInputStream()));
