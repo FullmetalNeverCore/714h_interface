@@ -22,9 +22,14 @@ import java.util.Set;
 
 import org.springframework.stereotype.Service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+
 
 @Service
 public class DataExchange {
+    private static final Logger logger = LoggerFactory.getLogger(DataExchange.class);
 
     private Config config = Config.getInstance();
 
@@ -50,12 +55,11 @@ public class DataExchange {
             in.close();
             con.disconnect();
 
-            System.out.println("Response Status: " + status + "\n" + "Server obtained,getting data...");
+            logger.debug("Response Status: " + status + "\n" + "Server obtained,getting data...");
             Type type = new TypeToken<Map<String, String>>(){}.getType();
             return new Gson().fromJson(content.toString(), type);
         } catch (Exception e) {
-            System.out.println("Server hosts no backend or No route to the host");
-            ExampleFX.enterIP(config.getIP()).ifPresent(ip -> config.setIP(ip));
+            logger.error("Server hosts no backend or No route to the host");
         }
         return null;
     }
@@ -139,8 +143,8 @@ public class DataExchange {
         }};
         JSONObject json = new JSONObject();
         for (String key : (Set<String>) xyz.keySet()){
-            System.out.println(key);
-            System.out.println(xyz.get(key));
+            logger.debug(key);
+            logger.debug(xyz.get(key));
             json.put(xyz.get(key),key);
         }
         chatEX(endpoint,json);
@@ -149,7 +153,7 @@ public class DataExchange {
     public void chatEX(String endpoint,JSONObject json) {
         try {
             String engine = cs.getEngine();
-            System.out.println(String.format("Engine: %s", engine));
+           logger.debug(String.format("Engine: %s", engine));
             URL url = new URL(String.format("http://%s:5001/%s", config.getIP(),endpoint));
             HttpURLConnection con = (HttpURLConnection) url.openConnection();
             con.setRequestMethod("POST");
@@ -158,7 +162,7 @@ public class DataExchange {
 
             String jsonInputString = json.toString();
 
-            System.out.println("JSON Input: " + jsonInputString);
+            logger.debug("JSON Input: " + jsonInputString);
 
             try (OutputStream os = con.getOutputStream()) {
                 byte[] input = jsonInputString.getBytes(StandardCharsets.UTF_8);
@@ -166,7 +170,7 @@ public class DataExchange {
             }
 
             int status = con.getResponseCode();
-            System.out.println(String.format("EXCHANGE_STATUS: %s", status));
+            logger.debug(String.format("EXCHANGE_STATUS: %s", status));
 
             try (BufferedReader br = new BufferedReader(
                     new InputStreamReader(con.getInputStream(), StandardCharsets.UTF_8))) {
