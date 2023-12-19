@@ -32,6 +32,11 @@ import javafx.concurrent.Task;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.MenuButton;
 import javafx.scene.layout.*;
+import javafx.scene.Node;
+
+
+import java.time.format.DateTimeFormatter;
+import java.time.LocalDateTime;
 
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundImage;
@@ -42,6 +47,8 @@ import javafx.scene.layout.BackgroundPosition;
 import javafx.animation.FadeTransition;
 import javafx.util.Duration;
 import javafx.animation.StrokeTransition;
+import javafx.geometry.Rectangle2D;
+import javafx.stage.Screen;
 
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 import org.springframework.messaging.simp.stomp.StompFrameHandler;
@@ -75,22 +82,112 @@ import java.net.URL;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 
 
 public class ExampleFX extends Application{
 
+    private class Effects{
+        public <T extends Node> void fadein(T obj,int dur){
+            FadeTransition fadeTransition = new FadeTransition(Duration.seconds((int)dur), obj);
+            fadeTransition.setFromValue(0.0);
+            fadeTransition.setToValue(1.0);
+            fadeTransition.play();
+        }
+
+        public TextArea nonedtab(int sizex, int sizey, double opac){
+            TextArea serverInfo = new TextArea();
+            serverInfo.setEditable(false);
+            serverInfo.setPrefSize(sizex, sizey);
+            serverInfo.setOpacity(opac);
+            serverInfo.setWrapText(true);
+            serverInfo.setStyle("-fx-text-alignment: left;display: block;" +
+                    "      margin-left: auto;" +
+                    "      margin-right: auto;" +
+                    "      width: 90%;" +
+                    "      color:red;" +
+                    "      font-size:10px;");
+            return serverInfo;
+        }
+
+
+    }
+
+
+    private class Misc{
+        public static Optional<String> enterIP(String ip){
+            TextInputDialog dialog = new TextInputDialog(ip); // Default IP
+            dialog.setTitle("Server IP Input");
+            dialog.setHeaderText("Enter the Server IP Address");
+            dialog.setContentText("IP:");
+
+            Optional<String> result = dialog.showAndWait();
+
+            return result;
+        }
+
+        public Label greeting(){
+
+
+            DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH");
+            LocalDateTime now = LocalDateTime.now();
+
+
+            Label greet = new Label();
+
+            if (Integer.parseInt(dtf.format(now)) >= 0 && Integer.parseInt(dtf.format(now)) <= 5){greet = new Label("Staying late,huh?");}
+            if (Integer.parseInt(dtf.format(now)) >= 5 && Integer.parseInt(dtf.format(now)) <= 10){greet = new Label("Good morning!");}
+            if (Integer.parseInt(dtf.format(now)) >= 10 && Integer.parseInt(dtf.format(now)) <= 17){greet = new Label("Have a nice day!");}
+            if (Integer.parseInt(dtf.format(now)) >= 17 && Integer.parseInt(dtf.format(now)) <= 0){greet = new Label("Good evening!");}
+
+            greet.setStyle("-fx-font-size: 30px;");
+
+            return greet;
+
+        }
+
+        public void SendData(DataExchange de,String text){
+            logger.debug("SENDING_DATA...");
+            de.jsoCreate(text, cs.getEngine(), "null","chat","type","null","chat_exchange");
+        }
+
+        public void sendnn(CurrentSetup cs,DataExchange de,float d1,float d2,float d3){
+            cs.setRnd(d1);
+            cs.setFpen(d2);
+            cs.setPpen(d3);
+            Map<String,String> xyz = new HashMap<>(){{
+                put("rnd",Float.toString(d1));
+                put("fpen",Float.toString(d2));
+                put("ppen",Float.toString(d3));
+            }};
+            for (String x : Arrays.asList("rnd","fpen","ppen")){
+
+                de.jsoCreate(xyz.get(x),x,"null","val","type","null","nn_vals");
+            }
+        }
+    }
+
+
+    private static final Logger logger = LoggerFactory.getLogger(ExampleFX.class);
+
     private Stage primaryStage;
 
     private Config config = Config.getInstance();
 
-    private Stuff stuff = new Stuff();
+    private static final Stuff stuff = new Stuff();
 
     private String msgbuff;
 
     private String server_data;
 
     private String filter;
+
+    private Effects fx = new Effects();
+
+    private Misc m = new Misc();
 
     private CurrentSetup cs = CurrentSetup.getInstance();
 
@@ -115,6 +212,8 @@ public class ExampleFX extends Application{
         this.primaryStage = primaryStage;
         primaryStage.setTitle("714h");
 
+        logger.info("START");
+
         this.hidenoimg = true;
 
         this.executorService = Executors.newFixedThreadPool(4);
@@ -124,7 +223,7 @@ public class ExampleFX extends Application{
         this.SexecutorService = Executors.newScheduledThreadPool(4);
 
 
-        enterIP("192.168.8.136").ifPresent(ip -> config.setIP(ip));
+        m.enterIP("192.168.8.136").ifPresent(ip -> config.setIP(ip));
 
 
         this.server_data = de.neofetch();
@@ -132,16 +231,17 @@ public class ExampleFX extends Application{
 
         this.chars = de.cl();
 
-        System.out.println(config.getIP());  //checking ip
+        logger.debug(config.getIP());  //checking ip
 
         this.pingstat = stuff.Ping();
 
-        login(); //login page
 
-        System.out.println("Setting gpt3 as default engine");
+
+        logger.debug("Setting gpt3 as default engine");
         cs.setEngine("gpt3");
 
-        primaryStage.show();
+        login(); //login page
+
 
 
 
@@ -151,46 +251,19 @@ public class ExampleFX extends Application{
 
     @Override
     public void stop() {
+        logger.info("STOP");
         stuff.StopThreads(new ArrayList<ExecutorService>(Arrays.asList(this.executorService,this.SexecutorService)));
     }
 
-    public void fadein(ImageView obj){
-        FadeTransition fadeTransition = new FadeTransition(Duration.seconds(5), obj);
-        fadeTransition.setFromValue(0.0);
-        fadeTransition.setToValue(1.0);
-        fadeTransition.play();
-    }
 
 
-    public static Optional<String> enterIP(String ip){
-        TextInputDialog dialog = new TextInputDialog(ip); // Default IP
-        dialog.setTitle("Server IP Input");
-        dialog.setHeaderText("Enter the Server IP Address");
-        dialog.setContentText("IP:");
-
-        Optional<String> result = dialog.showAndWait();
-
-        return result;
-    }
-
-
-    public TextArea nonedtab(int sizex,int sizey,double opac){
-        TextArea serverInfo = new TextArea();
-        serverInfo.setEditable(false);
-        serverInfo.setPrefSize(sizex, sizey);
-        serverInfo.setOpacity(opac);
-        serverInfo.setWrapText(true);
-        serverInfo.setStyle("-fx-text-alignment: left;display: block;" +
-                "      margin-left: auto;" +
-                "      margin-right: auto;" +
-                "      width: 90%;" +
-                "      color:red;" +
-                "      font-size:10px;");
-        return serverInfo;
-    }
 
     private void login() {
+
+
         StackPane root = new StackPane();
+
+
         HBox search = new HBox();
         Pane spacer = new Pane();
         Pane spacer2 = new Pane();
@@ -217,16 +290,18 @@ public class ExampleFX extends Application{
         root.setAlignment(search, Pos.CENTER);
 
         BorderPane layout = new BorderPane();
+
         FlowPane imageLayout = new FlowPane(10, 10);
+        imageLayout.setStyle("-fx-background-color: rgba(0, 0, 0, 0.5);");
         VBox forImage = new VBox();
+
 
         Label eng = new Label("ENGRAMS: ");
         eng.setStyle("-fx-font-size: 40px; -fx-padding: 20 0 200 0;");
-//        titleLabel.setStyle("-fx-font-size: 80px; -fx-padding: 20 0 200 0;"); // Adjust font size and padding as needed
 
-        TextArea serverInfo = nonedtab(500,250,0.5);
+        TextArea serverInfo = fx.nonedtab(500,250,0.5);
 
-        TextArea pingInfo = nonedtab(500,250,0.5);
+        TextArea pingInfo = fx.nonedtab(500,250,0.5);
 
 
         serverInfo.setText(this.server_data);
@@ -234,6 +309,7 @@ public class ExampleFX extends Application{
         pingInfo.setText(this.pingstat.toString());
 
         Button ping = new Button("RePing");
+
         ping.setOnAction(e -> {
             this.pingstat = stuff.Ping();
             pingInfo.setText(this.pingstat.toString());
@@ -242,21 +318,24 @@ public class ExampleFX extends Application{
         search.getChildren().add(ping);
 
 
+        Label greet = m.greeting();
+
 
         executorService.submit(()->{
             Image titleLabImage = new Image("https://i.imgur.com/zsk0v7O.png", 1024, 1024, true, true, true);
+
             titleLabImage.progressProperty().addListener((obs,oldProgress,newProgress)->{
                 if(newProgress.doubleValue() == 1.0){
                     ImageView titleLab = new ImageView(titleLabImage);
                     titleLab.setOpacity(0.0);
-                    fadein(titleLab);
+                    fx.fadein(titleLab,10);
                     topContainer.setAlignment(Pos.CENTER);
 
                     topContainer.getChildren().add(pingInfo);
 
                     topContainer.getChildren().add(spacer2);
 
-                    topContainer.getChildren().add(titleLab);
+                    topContainer.getChildren().addAll(new VBox(5,titleLab,greet){{setAlignment(Pos.CENTER);}});
 
 
                     topContainer.getChildren().add(spacer);
@@ -291,7 +370,7 @@ public class ExampleFX extends Application{
                                 imgurl.setPreserveRatio(false);
                                 imgurl.setOpacity(0.0);
 
-                                fadein(imgurl);
+                                fx.fadein(imgurl,5);
 
                                 imgurl.setOnMouseClicked(event -> changeGUI(charName, imageUrl));
 
@@ -320,7 +399,7 @@ public class ExampleFX extends Application{
 
         layout.setCenter(forImage);
         Button myButton = new Button("Change host");
-        myButton.setOnAction(e -> enterIP(config.getIP()).ifPresent(ip -> config.setIP(ip)));
+        myButton.setOnAction(e -> m.enterIP(config.getIP()).ifPresent(ip -> config.setIP(ip)));
         Button btnHide = new Button("Filter");
         btnHide.setOnAction(e -> {{
             this.hidenoimg = !this.hidenoimg;
@@ -336,37 +415,28 @@ public class ExampleFX extends Application{
         layout.setTop(topLayout);
 
 
-
         ScrollPane scrollPane = new ScrollPane();
+
+
         scrollPane.setContent(layout);
         scrollPane.setFitToWidth(true);
         scrollPane.setPannable(true);
+
+
         Scene scene = new Scene(scrollPane, 1600, 900);
         scrollPane.getStyleClass().add("overlay");
+
         scene.getStylesheets().add(getClass().getResource("/dark-theme.css").toExternalForm());
+
+        fx.fadein(scene.getRoot(),10);
+
+
         primaryStage.setScene(scene);
+        primaryStage.show();
+
     }
 
 
-    private void SendData(String text){
-        System.out.println("SENDING_DATA...");
-        de.jsoCreate(text, cs.getEngine(), "null","chat","type","null","chat_exchange");
-    }
-
-    private void sendnn(float d1,float d2,float d3){
-        cs.setRnd(d1);
-        cs.setFpen(d2);
-        cs.setPpen(d3);
-        Map<String,String> xyz = new HashMap<>(){{
-           put("rnd",Float.toString(d1));
-           put("fpen",Float.toString(d2));
-           put("ppen",Float.toString(d3));
-        }};
-        for (String x : Arrays.asList("rnd","fpen","ppen")){
-
-            de.jsoCreate(xyz.get(x),x,"null","val","type","null","nn_vals");
-        }
-    }
 
     private void changeGUI(String name, String img) {
         //N
@@ -395,7 +465,7 @@ public class ExampleFX extends Application{
                         backgroundImageView.setPreserveRatio(true);
                         backgroundImageView.setOpacity(0.0);
 
-                        fadein(backgroundImageView);
+                        fx.fadein(backgroundImageView,5);
 
                         BackgroundImage backgroundImg = new BackgroundImage(backgroundImage,
                                 BackgroundRepeat.NO_REPEAT, BackgroundRepeat.NO_REPEAT,
@@ -433,11 +503,12 @@ public class ExampleFX extends Application{
         sendButton.getStyleClass().add("button-large");
 
         Button hostButton = new Button("Change host");
-        hostButton.setOnAction(e -> enterIP(config.getIP()).ifPresent(ip -> config.setIP(ip)));
+        hostButton.setOnAction(e -> m.enterIP(config.getIP()).ifPresent(ip -> config.setIP(ip)));
 
 
         TextArea nonEditableTextArea = new TextArea();
         nonEditableTextArea.setEditable(false);
+        nonEditableTextArea.setWrapText(true);
         nonEditableTextArea.setPrefSize(800, 400);
         nonEditableTextArea.setMinSize(500, 400);
         nonEditableTextArea.setOpacity(0.5);
@@ -508,7 +579,7 @@ public class ExampleFX extends Application{
 
         }
         Button snn = new Button("Change NNvals");
-        snn.setOnAction(e -> sendnn(Float.parseFloat(textAreas.get(0).getText()), Float.parseFloat(textAreas.get(1).getText()), Float.parseFloat(textAreas.get(2).getText())));
+        snn.setOnAction(e -> m.sendnn(cs,de,Float.parseFloat(textAreas.get(0).getText()), Float.parseFloat(textAreas.get(1).getText()), Float.parseFloat(textAreas.get(2).getText())));
 
         nnval.getChildren().add(snn);
 
@@ -519,7 +590,7 @@ public class ExampleFX extends Application{
 
         sendButton.setOnAction(e -> {
             String tx = editableTextArea.getText();
-            SendData(tx);
+            m.SendData(de,tx);
         });
 
 
