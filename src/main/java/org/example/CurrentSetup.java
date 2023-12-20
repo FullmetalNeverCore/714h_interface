@@ -1,5 +1,9 @@
 package org.example;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+
 public class CurrentSetup {
     private String curEng;
 
@@ -11,12 +15,14 @@ public class CurrentSetup {
 
     private float ppen;
 
+    private static final Logger logger = LoggerFactory.getLogger(CurrentSetup.class);
+
     private static CurrentSetup instance = new CurrentSetup();
 
     private CurrentSetup() {}
 
     public void setEng(String data){
-        System.out.println(data);
+        logger.debug(data.toString());
         this.curEng = data;
     }
 
@@ -25,7 +31,7 @@ public class CurrentSetup {
     }
 
     public void setEngine(String data){
-        System.out.println(data);
+        logger.debug(data.toString());
         this.engine = data;
     }
 
@@ -34,7 +40,7 @@ public class CurrentSetup {
     }
 
     public void setRnd(Float data){
-        System.out.println(data);
+        logger.debug(data.toString());
         this.rnd = data;
     }
 
@@ -43,7 +49,7 @@ public class CurrentSetup {
     }
 
     public void setFpen(Float data){
-        System.out.println(data);
+        logger.debug(data.toString());
         this.fpen = data;
     }
 
@@ -52,7 +58,7 @@ public class CurrentSetup {
     }
 
     public void setPpen(Float data){
-        System.out.println(data);
+        logger.debug(data.toString());
         this.ppen = data;
     }
 
