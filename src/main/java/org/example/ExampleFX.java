@@ -98,9 +98,9 @@ public class ExampleFX extends Application{
             fadeTransition.play();
         }
 
-        public TextArea nonedtab(int sizex, int sizey, double opac){
+        public TextArea nonedtab(int sizex, int sizey, double opac,boolean edit){
             TextArea serverInfo = new TextArea();
-            serverInfo.setEditable(false);
+            serverInfo.setEditable(edit);
             serverInfo.setPrefSize(sizex, sizey);
             serverInfo.setOpacity(opac);
             serverInfo.setWrapText(true);
@@ -226,10 +226,13 @@ public class ExampleFX extends Application{
         m.enterIP("192.168.8.136").ifPresent(ip -> config.setIP(ip));
 
 
+        this.chars = de.cl();
+
+        if(this.chars == null){Runtime.getRuntime().exit(0);} //close program if no server route.
+
         this.server_data = de.neofetch();
 
 
-        this.chars = de.cl();
 
         logger.debug(config.getIP());  //checking ip
 
@@ -299,9 +302,9 @@ public class ExampleFX extends Application{
         Label eng = new Label("ENGRAMS: ");
         eng.setStyle("-fx-font-size: 40px; -fx-padding: 20 0 200 0;");
 
-        TextArea serverInfo = fx.nonedtab(500,250,0.5);
+        TextArea serverInfo = fx.nonedtab(500,250,0.5,false);
 
-        TextArea pingInfo = fx.nonedtab(500,250,0.5);
+        TextArea pingInfo = fx.nonedtab(500,250,0.5,false);
 
 
         serverInfo.setText(this.server_data);
@@ -506,12 +509,7 @@ public class ExampleFX extends Application{
         hostButton.setOnAction(e -> m.enterIP(config.getIP()).ifPresent(ip -> config.setIP(ip)));
 
 
-        TextArea nonEditableTextArea = new TextArea();
-        nonEditableTextArea.setEditable(false);
-        nonEditableTextArea.setWrapText(true);
-        nonEditableTextArea.setPrefSize(800, 400);
-        nonEditableTextArea.setMinSize(500, 400);
-        nonEditableTextArea.setOpacity(0.5);
+        TextArea nonEditableTextArea  = fx.nonedtab(800,400,0.5,false);
 
 
 
@@ -557,31 +555,25 @@ public class ExampleFX extends Application{
 
         toolBar.getItems().add(hostButton);
 
-
-        TextArea editableTextArea = new TextArea();
-        editableTextArea.setPrefSize(800, 200);
-        editableTextArea.setMinSize(400, 200);
-        editableTextArea.setOpacity(0.5);
+        TextArea editableTextArea  = fx.nonedtab(800,200,0.5,true);
 
 
         VBox nnval = new VBox(10);
 
         List<TextArea> textAreas = new ArrayList<TextArea>();
 
-        for (int x = 0;x<3;x++){
-            TextArea nnvals = new TextArea();
+        for(String x : new ArrayList<>(Arrays.asList("Temperature","Presence Penalty","Frequency Penalty"))){
+            TextArea nnvals  = fx.nonedtab(1,1,0.5,true);
             nnvals.setText("1.0");
-            nnvals.setPrefSize(1, 1);
-            nnvals.setOpacity(0.5);
 
-            nnval.getChildren().add(nnvals);
+            nnval.getChildren().addAll(new Label(x),nnvals);
             textAreas.add(nnvals);
 
         }
+
         Button snn = new Button("Change NNvals");
         snn.setOnAction(e -> m.sendnn(cs,de,Float.parseFloat(textAreas.get(0).getText()), Float.parseFloat(textAreas.get(1).getText()), Float.parseFloat(textAreas.get(2).getText())));
 
-        nnval.getChildren().add(snn);
 
 
         VBox vbox = new VBox(10);
@@ -594,8 +586,8 @@ public class ExampleFX extends Application{
         });
 
 
-        vbox.getChildren().addAll(nonEditableTextArea, editableTextArea,nnval);
-        vbox.getChildren().add(sendButton);
+        vbox.getChildren().addAll(new Label("Log:"),nonEditableTextArea, editableTextArea,nnval);
+        vbox.getChildren().addAll(snn,sendButton);
         vbox.getChildren().add(menuButton);
         vbox.setAlignment(Pos.CENTER);
 
@@ -624,3 +616,5 @@ public class ExampleFX extends Application{
     }
 
 }
+
+
