@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory;
 
 
 
-@Service
 public class DataExchange {
     private static final Logger logger = LoggerFactory.getLogger(DataExchange.class);
 
@@ -37,13 +36,16 @@ public class DataExchange {
 
 
 
-    public Map<String,String> cl() {
-        try {
-            URL url = new URL(String.format("http://%s:5001/char_list",config.getIP()));
+    //sending get requests,put it into StringBuffer
+    public StringBuffer sendreq(URL url){
+        try{
             HttpURLConnection con = (HttpURLConnection) url.openConnection();
             con.setRequestMethod("GET");
 
             int status = con.getResponseCode();
+
+            logger.debug("Response Status: " + status + "\n" + "Server obtained,getting data...");
+
             BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
             String inputLine;
             StringBuffer content = new StringBuffer();
@@ -55,7 +57,21 @@ public class DataExchange {
             in.close();
             con.disconnect();
 
-            logger.debug("Response Status: " + status + "\n" + "Server obtained,getting data...");
+
+            return content;
+        }
+        catch(Exception e){
+            logger.error(e.toString());
+        }
+        return new StringBuffer("NoBitches");
+    }
+
+    public Map<String,String> cl() {
+        try {
+            URL url = new URL(String.format("http://%s:5001/char_list",config.getIP()));
+
+            StringBuffer content = sendreq(url);
+
             Type type = new TypeToken<Map<String, String>>(){}.getType();
             return new Gson().fromJson(content.toString(), type);
         } catch (Exception e) {
@@ -69,22 +85,8 @@ public class DataExchange {
         try {
             URL url = new URL(String.format("http://%s:5001/msg_buffer", config.getIP()));
 
-            HttpURLConnection con = (HttpURLConnection) url.openConnection();
-            con.setRequestMethod("GET");
+            StringBuffer content = sendreq(url);
 
-            int status = con.getResponseCode();
-            BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
-            String inputLine;
-            StringBuffer content = new StringBuffer();
-
-            while ((inputLine = in.readLine()) != null) {
-                content.append(inputLine);
-            }
-
-            in.close();
-            con.disconnect();
-
-//            System.out.println("Response Status: " + status + "\n" + "Server obtained, getting data...");
 
             Type type = new TypeToken<Map<String, Object>>(){}.getType();
             Map<String, Object> resultMap = new Gson().fromJson(content.toString(), type);
@@ -92,7 +94,7 @@ public class DataExchange {
             return resultMap;
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error(e.toString());
         }
         return null;
     }
@@ -103,26 +105,12 @@ public class DataExchange {
         try {
             URL url = new URL(String.format("http://%s:5001/neofetch", config.getIP()));
 
-            HttpURLConnection con = (HttpURLConnection) url.openConnection();
-            con.setRequestMethod("GET");
-
-            int status = con.getResponseCode();
-            BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
-            String inputLine;
-            StringBuffer content = new StringBuffer();
-
-            while ((inputLine = in.readLine()) != null) {
-                content.append(inputLine);
-            }
-
-            in.close();
-            con.disconnect();
-
+            StringBuffer content = sendreq(url);
 
             return content.toString();
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error(e.toString());
         }
         return null;
     }
@@ -135,7 +123,7 @@ public class DataExchange {
             String[] tempx = new String[] {x,y,z};
             String[] tempy = new String[] {xn,xy,xz};
             for (int tx = 0;tx<tempx.length;tx++){
-                if (!tempx[tx].equals("null")){
+                if (!tempx[tx].equals("null")){   //ignoring null items
                     put(tempx[tx],tempy[tx]);
                 }
             }
@@ -182,7 +170,7 @@ public class DataExchange {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error(e.toString());
         }
     }
 
