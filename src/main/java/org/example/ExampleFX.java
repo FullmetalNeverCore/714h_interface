@@ -493,13 +493,17 @@ public class ExampleFX extends Application{
 
         MenuButton menuButton = new MenuButton("Engine");
 
-        MenuItem option1 = new MenuItem("gpt3");
-        option1.setOnAction(e->cs.setEngine("gpt3"));
+        HashMap<String,MenuItem> options = new HashMap<>(){{
+            put("gpt3",new MenuItem("gpt3"));
+            put("gpt3.5-turbo",new MenuItem("gpt3.5-turbo"));
+            put("Mistral",new MenuItem("Mistral"));
+        }};
 
-        MenuItem option2 = new MenuItem("gpt3.5-turbo");
-        option2.setOnAction(e->cs.setEngine("gpt3.5-turbo"));
+        for (String x : options.keySet()){
+            options.get(x).setOnAction(e->cs.setEngine(x));
+            menuButton.getItems().add(options.get(x));
+        }
 
-        menuButton.getItems().addAll(option1, option2);
 
         Button sendButton = new Button("Send");
 
